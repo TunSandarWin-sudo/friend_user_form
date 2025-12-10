@@ -42,7 +42,7 @@ pipeline {
                           API_PORT=3001
                           FRONTEND_PORT=3000
                           PHPMYADMIN_PORT=8888
-                          NEXT_PUBLIC_API_HOST=http://localhost:3001
+                          NEXT_PUBLIC_API_HOST=http://192.168.56.1:3001
                           EOF
                         '''
                     }
