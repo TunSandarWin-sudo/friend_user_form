@@ -34,7 +34,7 @@ pipeline {
                         sh '''
                           cat > .env <<EOF
                           MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASS}
-                          MYSQL_DATABASE=MITH_Final_Project
+                          MYSQL_DATABASE=user_form_db
                           MYSQL_USER=app_user
                           MYSQL_PASSWORD=${MYSQL_PASS}
                           MYSQL_PORT=3306
@@ -87,7 +87,7 @@ pipeline {
                   curl -f http://localhost:3001/health
 
                   echo "Checking products endpoint..."
-                  curl -f http://localhost:3001/products
+                  curl -f http://localhost:3001/users
 
                   echo "Health check passed."
                 '''
@@ -97,7 +97,7 @@ pipeline {
 
     post {
         success {
-            echo "MITH perfume CI/CD pipeline finished successfully."
+            echo "User Form CI/CD pipeline finished successfully."
         }
         failure {
             echo "Pipeline failed. Showing last logs..."
