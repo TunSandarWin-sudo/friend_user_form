@@ -15,32 +15,31 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false); // to avoid hydration issues
+  const [mounted, setMounted] = useState(false); // avoid hydration mismatch
 
-  // 👇 change 3001 to whatever port your backend uses
   const apiHost =
     process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
 
-  // mark as mounted (client only)
+  // Mark as mounted (client side only)
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fetch users from API
+  // Load users from API
   useEffect(() => {
     if (!mounted) return;
 
     const fetchUsers = async () => {
-      try {
-        setError("");
-        setLoading(true);
+      setLoading(true);
+      setError("");
 
+      try {
         const res = await fetch(`${apiHost}/users`, {
           cache: "no-store",
         });
 
         if (!res.ok) {
-          throw new Error("Failed to load users");
+          throw new Error(`Failed to load users (status ${res.status})`);
         }
 
         const data = await res.json();
@@ -55,6 +54,7 @@ export default function HomePage() {
     fetchUsers();
   }, [apiHost, mounted]);
 
+  // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -73,11 +73,18 @@ export default function HomePage() {
       });
 
       if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || "Failed to create user");
+        let message = "Failed to create user";
+        try {
+          const errBody = await res.json();
+          if (errBody && errBody.error) {
+            message = errBody.error;
+          }
+        } catch (_) {}
+        throw new Error(message);
       }
 
       const created = await res.json();
+      // Add new user at top of list
       setUsers((prev) => [created, ...prev]);
       setForm(emptyForm);
     } catch (err) {
@@ -87,7 +94,7 @@ export default function HomePage() {
     }
   };
 
-  // Avoid server/client mismatch
+  // Don’t render until mounted (fix hydration issues)
   if (!mounted) return null;
 
   return (
