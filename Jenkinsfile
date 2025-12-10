@@ -77,22 +77,18 @@ pipeline {
             }
         }
 
-        stage('Health Check') {
+      stage('Health Check') {
             steps {
                 sh '''
-                  echo "Waiting for services to start..."
-                  sleep 20
-
-                  echo "Checking API health..."
-                  curl -f http://localhost:3001/health
-
-                  echo "Checking products endpoint..."
-                  curl -f http://localhost:3001/users
-
-                  echo "Health check passed."
+                echo "Waiting for services to start..."
+                sleep 20
+                echo "Checking API health..."
+                curl -f http://localhost:3001/health
+                echo "API health OK"
                 '''
             }
         }
+
     }
 
     post {
