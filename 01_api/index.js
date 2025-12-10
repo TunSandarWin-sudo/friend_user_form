@@ -23,16 +23,24 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-// Health check
+// Health check endpoint (do NOT fail if DB is not ready)
 app.get("/health", async (req, res) => {
+  let dbOk = false;
+
   try {
     const [rows] = await pool.query("SELECT 1 AS ok");
-    res.json({ status: "ok", db: rows[0].ok === 1 });
+    dbOk = rows[0].ok === 1;
   } catch (err) {
-    console.error("GET /health error:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    console.error("Health DB check error:", err.message);
+    // we just log the error; don't return 500
   }
+
+  res.json({
+    status: "ok",
+    db: dbOk,
+  });
 });
+
 
 // GET /users – list all users
 app.get("/users", async (req, res) => {
