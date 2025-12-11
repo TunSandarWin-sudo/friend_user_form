@@ -7,12 +7,16 @@ RUN npm ci
 # Stage 2: build
 FROM node:20-alpine AS builder
 WORKDIR /app
-ARG NEXT_PUBLIC_API_HOST=http://localhost:3001
+
+# use the VM’s IP that you use in the browser
+ARG NEXT_PUBLIC_API_HOST=http://192.168.56.1:3001
 ENV NEXT_PUBLIC_API_HOST=${NEXT_PUBLIC_API_HOST}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+
 
 # Stage 3: runtime
 FROM node:20-alpine AS runner
