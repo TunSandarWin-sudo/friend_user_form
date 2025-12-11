@@ -1,3 +1,5 @@
+# 02_frontend/Dockerfile
+
 # Stage 1: dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
@@ -8,21 +10,22 @@ RUN npm ci
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# use the VM’s IP that you use in the browser
-ARG NEXT_PUBLIC_API_HOST=http://192.168.56.1:3001
-ENV NEXT_PUBLIC_API_HOST=${NEXT_PUBLIC_API_HOST}
+# we will pass this from docker-compose (NO default localhost)
+ARG NEXT_PUBLIC_API_HOST
+ENV NEXT_PUBLIC_API_HOST=$NEXT_PUBLIC_API_HOST
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-
 # Stage 3: runtime
 FROM node:20-alpine AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
+
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY package*.json ./

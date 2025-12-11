@@ -1,86 +1,84 @@
+// 01_api/index.js
 const express = require("express");
-const mysql = require("mysql2/promise");
 const cors = require("cors");
-const path = require("path");
-const dotenv = require("dotenv");
+const bodyParser = require("body-parser");
+const mysql = require("mysql2/promise");
 
-// Load local env if present (for non-Docker dev)
-dotenv.config({ path: path.join(__dirname, ".env.local") });
+const PORT = process.env.PORT || 3001;
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// MySQL connection pool
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "mysql",
-  user: process.env.DB_USER || "app_user",
-  password: process.env.DB_PASSWORD || "user_pass",
+  host: process.env.DB_HOST || "localhost",
+  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "user_form_db",
-  port: Number(process.env.DB_PORT || 3306),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
 
-// Health check endpoint (do NOT fail if DB is not ready)
+const app = express();
+
+app.use(
+  cors({
+    origin: "*", // you can change to your specific frontend origin if you want
+  })
+);
+app.use(bodyParser.json());
+
+// ---- HEALTH CHECK ----------------------------------------------------------
 app.get("/health", async (req, res) => {
-  let dbOk = false;
-
   try {
-    const [rows] = await pool.query("SELECT 1 AS ok");
-    dbOk = rows[0].ok === 1;
+    await pool.query("SELECT 1");
+    return res.json({ status: "ok", db: true });
   } catch (err) {
-    console.error("Health DB check error:", err.message);
-    // we just log the error; don't return 500
+    console.error("Health DB check error:", err);
+    return res.json({ status: "ok", db: false });
   }
-
-  res.json({
-    status: "ok",
-    db: dbOk,
-  });
 });
 
-
-// GET /users – list all users
+// ---- GET ALL USERS ---------------------------------------------------------
 app.get("/users", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM users ORDER BY id DESC");
+    const [rows] = await pool.query(
+      "SELECT id, username, info, email, contact FROM users ORDER BY id DESC"
+    );
     res.json(rows);
   } catch (err) {
     console.error("GET /users error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Failed to load users" });
   }
 });
 
-// POST /users – create new user
+// ---- CREATE USER -----------------------------------------------------------
 app.post("/users", async (req, res) => {
-  const { username, info, email, contact } = req.body;
+  const { username, info, email, contact } = req.body || {};
 
   if (!username || !email || !contact) {
     return res
       .status(400)
-      .json({ error: "username, email and contact are required." });
+      .json({ error: "username, email and contact are required" });
   }
 
   try {
     const [result] = await pool.query(
       "INSERT INTO users (username, info, email, contact) VALUES (?, ?, ?, ?)",
-      [username, info ?? "", email, contact]
+      [username, info || "", email, contact]
     );
 
-    const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [
-      result.insertId,
-    ]);
+    const [rows] = await pool.query(
+      "SELECT id, username, info, email, contact FROM users WHERE id = ?",
+      [result.insertId]
+    );
 
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("POST /users error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Failed to create user" });
   }
 });
 
-const port = Number(process.env.PORT || process.env.API_PORT || 3001);
-app.listen(port, () => {
-  console.log(`User API listening on http://localhost:${port}`);
+// ---- START SERVER ----------------------------------------------------------
+app.listen(PORT, () => {
+  console.log(`User API listening on http://localhost:${PORT}`);
 });

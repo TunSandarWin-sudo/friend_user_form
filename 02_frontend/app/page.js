@@ -15,46 +15,44 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false); // avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  const [apiHost, setApiHost] = useState("");
 
-  const apiHost =
-    process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
-
-  // Mark as mounted (client side only)
+  // Setup on client: fix hydration + detect API host from browser URL
   useEffect(() => {
     setMounted(true);
+
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname; // localhost OR 192.168.56.1, etc.
+      setApiHost(`http://${host}:3001`);
+    }
   }, []);
 
   // Load users from API
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !apiHost) return;
 
     const fetchUsers = async () => {
-      setLoading(true);
-      setError("");
-
       try {
-        const res = await fetch(`${apiHost}/users`, {
-          cache: "no-store",
-        });
+        setError("");
+        setLoading(true);
 
-        if (!res.ok) {
-          throw new Error(`Failed to load users (status ${res.status})`);
-        }
+        const res = await fetch(`${apiHost}/users`, { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to load users");
 
         const data = await res.json();
         setUsers(data);
       } catch (err) {
-        setError(err.message || "Failed to load users");
+        console.error("Fetch users error:", err);
+        setError("Failed to load users");
       } finally {
         setLoading(false);
       }
     };
 
     fetchUsers();
-  }, [apiHost, mounted]);
+  }, [mounted, apiHost]);
 
-  // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -62,6 +60,12 @@ export default function HomePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!apiHost) {
+      setError("API host is not configured");
+      return;
+    }
+
     setError("");
     setSubmitting(true);
 
@@ -73,28 +77,22 @@ export default function HomePage() {
       });
 
       if (!res.ok) {
-        let message = "Failed to create user";
-        try {
-          const errBody = await res.json();
-          if (errBody && errBody.error) {
-            message = errBody.error;
-          }
-        } catch (_) {}
-        throw new Error(message);
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || "Failed to create user");
       }
 
       const created = await res.json();
-      // Add new user at top of list
       setUsers((prev) => [created, ...prev]);
       setForm(emptyForm);
     } catch (err) {
-      setError(err.message || "Failed to create user");
+      console.error("Create user error:", err);
+      setError(err.message || "Internal Server Error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Don’t render until mounted (fix hydration issues)
+  // avoid SSR mismatch
   if (!mounted) return null;
 
   return (

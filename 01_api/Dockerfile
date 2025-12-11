@@ -1,12 +1,14 @@
+# 01_api/Dockerfile
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --only=production
 
 COPY . .
 
-EXPOSE 3001
+ENV PORT=3001
 
-CMD ["node", "index.js"]
+EXPOSE 3001
+CMD ["npm", "start"]

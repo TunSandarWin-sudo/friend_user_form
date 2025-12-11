@@ -1,13 +1,20 @@
+-- init.sql
 CREATE DATABASE IF NOT EXISTS user_form_db
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+CREATE USER IF NOT EXISTS 'app_user'@'%' IDENTIFIED BY 'user_pass';
+GRANT ALL PRIVILEGES ON user_form_db.* TO 'app_user'@'%';
+FLUSH PRIVILEGES;
 
 USE user_form_db;
 
 CREATE TABLE IF NOT EXISTS users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   username VARCHAR(255) NOT NULL,
-  info TEXT,
+  info TEXT NULL,
   email VARCHAR(255) NOT NULL,
   contact VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
 );
